@@ -1,0 +1,633 @@
+---
+title: "SMDE SECOND ASSIGMENT"
+author: "Balbina Virgili Rocosa"
+date: "27th November 2017"
+output:
+  pdf_document: default
+word_document: default
+---
+  
+## FIRST QUESTION: DEFINE YOUR RNG (OPTIONAL)
+
+The main objective of this first exercise is to choose a RNG, implement it and, finally, test the correctness of the implemented RNG.
+
+A random number generator is a computational device designed to generate a sequence of numbers or symbols that cannot be reasonably predicted better than by a random chance. There are several types of RNGs, the one that has been chosen for this exercise is a Congruential Random Number Generator.
+
+Congruential generators are based on one of the oldest and best-known algorithms, which is based on congruence and linear function. The one chosen here is a type of Congruential generator which is known as the Park–Miller random number generator. The main characteristic of it is that it always set the incremental parameter to 0.
+
+To implement it, the Java code found on the wiki has been adapted to R:
+
+```{r, results=F}
+library(randtests)
+```
+
+```{r}
+#Function implemented in R
+executeCongruentialRNG <- function(number=10, multiplier=16807, increment=0,seed=3793){
+  #Variables initialization
+  x2 <- 0
+  x1 <- seed
+  #Create empty outputFrame by default
+  output <- c()
+  
+  #Iterate as many times as the value of number is defined
+  for(i in number:1){
+    #Algorithm implementation for each iteration
+    x2 <- (multiplier*x1 + increment)%%((2^31)-1)
+    calculated <- x2 / ((2^31)-1)
+    output <- c(output,calculated)
+    x1 <- x2
+  }
+  #return all value calculated
+  return(output)
+  
+}
+```
+
+As it can be seen on the implemented code, that some parameters are needed to achieve a correct performance. These parameters are:
+
+* Number: define the amount of generated values
+* Multiplier: multiplier factor
+* Increment: it is set to 0 to improve the performance of the test
+* Seed: set the initial value
+
+The default values for each of the parameters have been determined using the first parametrization of the wiki, as it is known that are desired values because it had already passed several random number tests.
+
+To be able to check the correct performance of the implemented RNG, first, 100 values are desired to be created.
+
+```{r}
+#Execute the RNG function created
+example = executeCongruentialRNG(100)
+```
+
+Finally, several tests of correctness must be passed to prove the validity of the implemented RNG, both of them measure the randomness of the generated values.
+
+1-. Randomness test
+
+It is possible to test the randomness of the response with Mann-Kendall Rank test.
+If none alternative attribute is defined, the alternative hypothesis by default is 'two.sided'.
+
+```{r}
+#Mann-Kendall Rank test
+rank.test(example)
+```
+
+The calculated p-value is higher than the significance level 0.05, so the alternative hypothesis can be accepted So, there is no indication that randomness is violated.
+
+2-. Randomness test
+
+It is possible to test the randomness of the response with Bartels rank test of randomness.
+If none alternative attribute is defined, the alternative hypothesis by default is 'two.sided'.
+
+```{r}
+#Bartels rank test
+bartels.rank.test(example)
+```
+
+The calculated p-value is lower than the significance level 0.05, so the alternative hypothesis cannot be accepted. In other words, there is indication that nonrandomness is violated.
+
+## SECOND QUESTION: SIMULATE YOUR DATA
+
+In this exercise, a dataset with the structure specified is generated.
+To do it, first of all, a distribution has been defined for each of the first five factors. 
+
+The different factors defined are the following ones:
+
+* **Factor 1:** Normal distribution with mean 0 and sd 1
+* **Factor 2:** Uniform distribution with min 0 and max 12
+* **Factor 3:** Exponential distribution with rate 1
+* **Factor 4:** Normal distribution with mean 3 and sd 3
+* **Factor 5:** Uniform distribution with min 6 and max 25
+
+Then, a different combination of the already defined factors has been determined for each of the other five factors.
+
+* **Factor 6:** 2Factor1 + Factor3
+* **Factor 7:** Factor4 + Factor1
+* **Factor 8:** Factor3 + 3Factor4 + 2Factor5
+* **Factor 9:** 2Factor2 + Factor5
+* **Factor 10:** 3Factor2 + Factor3 + Factor1
+
+As it is shown below, all factors defined are created using R.
+
+```{r}
+#Generation of the different factors as defined
+factor1 <- rnorm(100, mean=0, sd=1)
+factor2 <- runif(100, min=0, max=12)
+factor3 <- rexp(100, rate=1)
+factor4 <- rnorm(100, mean=3, sd=3)
+factor5 <- runif(100, min=6, max=25)
+
+#Generation of the factors as a combination of the previous ones
+factor6 <- (2*factor1) + factor3
+factor7 <- factor4 + factor1
+factor8 <- factor3 + (3*factor4) + (2*factor5)
+factor9 <- (2*factor2) + factor5
+factor10 <- (3*factor2) + factor3 + factor1
+```
+
+Now, it is time to define the answer variable which must be composed as a subset of the previous factors plus a known normal distribution which add random noise.
+
+* **Answer:** Factor9 + Factor8 - 2Factor3 + 2Factor5 + Normal distribution with mean 3 and sd 1
+
+NOTE: Taking into account the factor combinations previously defined, this answer variable could be also written as:  *Answer= F5 + 2F2 + 3F4 - F3 + Normal distribution with mean 3 and sd 1*
+
+It is also created using R.
+```{r}
+#Generation of the answer variable
+answer <- factor9 + factor8 - (2*factor3) - (2*factor5) + rnorm(100, mean=1, sd=1)
+```
+
+Afterwards, a table with all factors and the answer variable defined has been created using R in order to obtain the table specified.
+
+```{r}
+#Generation of the dataset
+data <- data.frame(factor1, factor2, factor3, factor4, factor5, factor6, 
+                   factor7, factor8, factor9, factor10, answer)
+```
+
+```{r, echo=FALSE}
+data <- read.table("/Users/balbinavirgili/generated_dataset.csv")
+```
+
+
+## THIRTH QUESTION: OBTAIN AN EXPRESSION TO GENERATE NEW DATA
+
+In this exercise, the dataset generated needs to be explored in order to, finally, be able to define an expression to obtain new data. 
+
+So, first of all, the different relations and interactions between each factors need to be explored. To do it, the PCA analysis will be used to describe the main variables that exists on the dataset created. As we already saw in the last assignment, the PCA analysis is useful to see if there are linear relationships between variables. So, for the analysis, all variables will be used as active variables because, at this point, it is supposed to know nothing about the dataset.
+
+Before performing it, it can be easily realized that PCA assumptions are fulfilled, since all the data is numeric and the number of rows of the dataset is bigger than the number of columns.
+
+```{r, results=F}
+#FactoMineR needs to be loaded to be able to perform PCA
+library("FactoMineR")
+```
+```{r}
+#PCA analysis
+pcaAnalysis = PCA(data, scale.unit=TRUE,graph=T)
+```
+
+With the results obtained, it can be determined all the relationships between the different factors of the dataset created during the previous exercise. And as we can see with the plot printed, we can also assume that the first two dimensions resume almost the 63% of the total variance of the dataset.
+Analyzing the data obtained, it can be assumed that there two different groups of positive correlated variables. The first one is F4, F7, F5, F8 and F1. The second one is F5, F9, F10 and F2. Also, answer seems to be positive correlated by all the factors (specially F1, F5 and F8), except F3, with which has a negative correlation.
+
+So, at this moment, it is not easy to specify the real relation between all factors and the answer variable because the dataset has too many correlated dimensions to determine the behavior just analyzing the retrieved PCA graphic.
+
+To continue exploring the possible relations between all variables of the dataset, several linear models will be performed.
+
+The first linear model test performed analyze the relation of answer against all the other categories of the dataset.
+
+```{r}
+#Generate the linear model of answer distribution
+lRegression1 <- lm( answer  ~ ., data=data)
+```
+```{r, echo=FALSE}
+summary(lRegression1)
+```
+
+With the results retrieved, we can see that from factors 6 to 10 a NA value is defined. This value NA indicates that each of these factors are linear combinations of the other factors, in other words, their behavior can be determined from different combinations of the other factors used. So, more tests will need to be performed to determine their relation.
+Moreover, the factors 2,3,4 and 5 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we can determine that factor2, factor3, factor4 and factor5 have a relation with the answer distribution.
+Otherwise, the results show that factor1 is not much related with answer distribution so it can be discarded from the linear model as well as the factors which are linear combinations.
+
+Before performing the new linear model with the discarded variables, the relation between each factor wants to be determined. To achieve it, a linear model for each of the factors which retrieved a NA value is performed.
+
+
+```{r}
+#Generate the linear model of factor6 distribution
+lRegression2 <- lm(formula =  factor6  ~  factor1 + factor2  +  factor3  + factor4 + factor5, 
+                   data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression2)
+```
+
+With the results retrieved, we can see that factor1 and factor3 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that this two categories have a relation with the factor6 distribution.
+In this case, the R-squared value is 1 so the probability to predict the factor6 distribution in this calculated linear model can be considered as very good one.
+So it can be determined that:
+
+**Factor6:** 2.0Factor1 + 1.0Factor3
+\newline
+\newline
+```{r}
+#Generate the linear model of factor7 distribution
+lRegression3 <- lm( formula =  factor7  ~  factor1 + factor2  +  factor3  + factor4 + factor5, 
+                    data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression3)
+```
+
+With the results retrieved, we can see that factor1 and factor4 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that this two categories have a relation with the factor6 distribution.
+In this case, the R-squared value is 1 so the probability to predict the factor6 distribution in this calculated linear model can be considered as very good one.
+So it can be determined that:
+
+**Factor7:** 1.0Factor1 + 1.0Factor4
+\newline
+\newline
+```{r}
+#Generate the linear model of factor8 distribution
+lRegression4 <- lm( formula =  factor8  ~  factor1 + factor2  +  factor3  + factor4 + factor5, 
+                    data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression4)
+```
+
+With the results retrieved, we can see that factor3, factor4 and factor5 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that this two categories have a relation with the factor6 distribution.
+In this case, the R-squared value is 1 so the probability to predict the factor6 distribution in this calculated linear model can be considered as very good one.
+So it can be determined that:
+
+**Factor8:** 1.0Factor3 + 3.0Factor4 + 2.0Factor5
+\newline
+\newline
+```{r}
+#Generate the linear model of factor9 distribution
+lRegression5 <- lm( formula =  factor9  ~  factor1 + factor2  +  factor3  + factor4 + factor5, 
+                    data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression5)
+```
+
+With the results retrieved, we can see that factor2 and factor5 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that this two categories have a relation with the factor6 distribution.
+In this case, the R-squared value is 1 so the probability to predict the factor6 distribution in this calculated linear model can be considered as very good one.
+So it can be determined that:
+
+**Factor9:** 2.0Factor2 + 1.0Factor5
+\newline
+\newline
+```{r}
+#Generate the linear model of factor10 distribution
+lRegression6 <- lm( formula =  factor10  ~  factor1 + factor2  +  factor3  + factor4 + factor5,
+                    data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression6)
+```
+
+With the results retrieved, we can see that factor1, factor2 and factor3 have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that this two categories have a relation with the factor6 distribution.
+In this case, the R-squared value is 1 so the probability to predict the factor6 distribution in this calculated linear model can be considered as very good one.
+So it can be determined that:
+
+**Factor10:** 1.0Factor1 + 3.0Factor2 + 1.0Factor3
+\newline
+\newline
+
+Comparing the linear combinations calculated of all the factors from 6 to 10, we can determine that the results obtained are exactly the same than the ones that were calculated.
+
+After being able to determine all the relations between the factors that have linear combinations, it is time to perform the linear model of the answer without the discarded attributes, after taking into account the conclusions of the first linear model performed.
+
+```{r}
+#Generate the linear model without discarted distributions
+lRegression7 <- lm(formula =  answer  ~  factor2  +  factor3  + factor4 + factor5, data = data)
+```
+```{r, echo=FALSE}
+summary(lRegression7)
+```
+
+With the results retrieved, we can see that all values have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that all categories have a relation with the answer distribution.
+In this case, the R-squared value is 0.9898 so the probability to predict the answer distribution in this calculated linear model can be considered as very good one (the value has not change from the previous linear model when any factor was discarded).
+
+Finally, Linear model test assumptions must be calculated to prove the test validity.
+
+1-. Normality test
+
+It is necessary to test that the response is normally distributed with Shapiro-Wilk normality test.
+
+```{r}
+#Shapiro-Wilk normality test
+shapiro.test(residuals(lRegression7))
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication that normality distribution is violated.
+
+2-. Homogeneity of variance 
+
+It is necessary to test that the variance is similar within different groups with Breusch Pagan test.
+
+```{r}
+#Breusch Pagan test
+lmtest::bptest(lRegression7)
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication of heteroscedasticity on the calculated model. So we can conclude that there is homogeneity of variance. Otherwise, some transformations to eliminate heteroscedasticity would have been performed.
+
+3-. Independence of variables
+
+It is necessary to test that the data values are independent with Durbin Watson test.
+
+```{r}
+#Durbin Watson test
+lmtest::dwtest(lRegression7)
+```
+
+The calculated p-value is higher than the significance level 0, so the alternative hypothesis can be accepted. It means that the variables are not independent and it exits a correlation between them.
+
+After checking the validity of the test performed, it can be determined that a possible expression to generate new data is the following one:
+
+ **answer = 2.02538 * factor2 - 0.98192 * factor3 + 3.00774 * factor4 + 0.99971 * factor5**
+ \newline
+ \newline
+Comparing the linear combination calculated from the one defined during the previous exercise, we can determine that the results obtained are approximately the same than the ones that were calculated (see NOTE coomment from the previous exercise). It can also be determined that the decimal variation of the value of each multiplied factor it's due to the error added on the initial definition of the answer.
+
+To finally check if the linear model just calculated is correct for our dataset, a prediction of the next value of answer will be performed. To do it, another dataset with the same characteristics of the initial dataset will be created. But this time, the answer parameter will be calculated using the new linear model defined.
+ 
+```{r}
+#Generation of the different factors as defined
+factor1 <- rnorm(30, mean=0, sd=1)
+factor2 <- runif(30, min=0, max=12)
+factor3 <- rexp(30, rate=1)
+factor4 <- rnorm(30, mean=3, sd=3)
+factor5 <- runif(30, min=6, max=25)
+
+#Generation of the factors as a combination of the previous ones
+factor6 <- (2*factor1) + factor3
+factor7 <- factor4 + factor1
+factor8 <- factor3 + (3*factor4) + (2*factor5)
+factor9 <- (2*factor2) + factor5
+factor10 <- (3*factor2) + factor3 + factor1
+
+#Generation of the answer variable
+answer <- 2.01467 * factor2 - 1.10249 * factor3 + 2.99932 * factor4 + 0.99738 * factor5
+data2 <- data.frame(factor1, factor2, factor3, factor4, factor5, factor6, 
+                   factor7, factor8, factor9, factor10, answer)
+```
+
+```{r}
+#Predict the behavior of the athletes with prediction interval
+predictedData <- predict(lRegression7, newdata=data2, interval="prediction")
+
+#Determine if the data of OlympicsG competition lies between the rangs calculated 
+#TRUE if fits into the rang, FALSE OTHERWISE
+compData <- c()
+predictedDataFrame <- data.frame(x1=predictedData)
+answerDataFrame <- data.frame(x1=answer) 
+for(x in 1:nrow(predictedDataFrame)) {
+  if( answerDataFrame$x1[x] >= predictedDataFrame$x1.lwr[x] &&
+      answerDataFrame$x1[x] <= predictedDataFrame$x1.upr[x]){
+    compData[x] <-  TRUE 
+  }else{
+    compData[x] <-  FALSE 
+  }
+}
+predictedDataFrame["prediction"] <- compData
+predictedDataFrame
+```
+
+As it was expected, we have obtained 30 well-predicted values and zero wrong-predicted. Then, the prediction interval obtained is 100% and can be confirmed that the values obtained lie within the prediction interval of 95% of the samples so it can be determined that the model designed is an accurate one.
+
+## FORTH QUESTION: DOE
+
+The main objective of this last exercise is to perform a design of experiments with the model obtained from the previous exercise, in order to explore what parametrization of the 10 factors the answer obtains the best value.
+
+To perform a design of experiments, the following points must be developed.
+
+•	**Set the objectives.**
+
+Determine the parametrization of the 10 factors with what the answer obtains the maximum value.
+
+•	**Select the process variables.**
+
+The process variables needed are Factor 1-10. But, taking into account the results obtained during the previous exercise, it was determined that answer is just correlated with factor2, factor3, factor4 and factor5. So, a simplification can be made with just using this four factors mentioned. In the following point, the implications of this simplification will be discused.
+
+•	**Define an experimental design.**
+
+To be able to determine the parametrization of the 10 factors with what the answer obtains the maximum value, a full factorial design must be performed in order to assure that all the combinations with economy are being analyzed during the experimentation.
+
+Since our factor values have more than 2 levels, n*v^k experiments should be performed, where n are the replications of the experiment, v the levels for each factor and k the number of factors being investigated. With 10 factors and more than two labels, the total amount of experiments needed is too high.
+
+So, the easiest factorial design to achieve the objective is the 2^k experimental design, where k is the number of factors being investigated in the experiment.
+This factorial experiments, also known as full factorial two level experiments, is a factorial experiments in which each factor is investigated at only two levels, which are considered as the most important ones, usually the maximum and the minimum values are chosen. With this design, all combinations of the levels of the factors are run.
+
+In the current experimental design, 10 factors need to be investigated. Then, with full factorial two level experiment, 2^10=1024 experiments need to be performed for a single replicate. Hopefully, during the previous exercise, it has been determined that the answer distribution is just correlated with factor2, factor3, factor4 and factor5. In this way, the number of factors can be simplified and the number of runs needed is now set to 2^4=16.
+
+Additional, replications are needed to be able to have information regarding the errors in the measurements. Unfortunately, due to the limited budget, just two replications can be performed. Otherwise, the needed number of replications to obtain a result within a desired confidence level should be calculated. So, finally, the number of runs for this experiment is calculated by n*2^k, which is
+2*2^4 = 32 runs.
+
+To conclude, a 2^k experimental design needs to be performed where:
+
+* K = 4, regarding factor2, factor3, factor4 and factor5
+* N = 2
+* The two levels defined for each factor will be the minimum and the maximum value of each of them
+* 32 runs will be performed
+* Yates algorithm will be used to simplify the interaction calculus of the experiment
+
+•	**Execute the design.**
+
+Now it is time to execute the designed experiment.
+
+To be able to execute it, the dataset of the two replications need to be performed. Thanks to the new expression found during the previous exercise, the generation of the datasets needed can be simplified with the factors 2, 3, 4 and 5.
+
+```{r}
+#First replication
+#Generation of the different factors needed as defined
+factor2 <- runif(20, min=0, max=12)
+factor3 <- rexp(20, rate=1)
+factor4 <- rnorm(20, mean=3, sd=3)
+factor5 <- runif(20, min=6, max=25)
+
+#Generation of the answer variable using the linear model defined
+answer <- 2.01467 * factor2 - 1.10249 * factor3 + 2.99932 * factor4 + 0.99738 * factor5
+
+#Generation of the dataset
+data3 <- data.frame(factor2, factor3, factor4, factor5, answer)
+```
+```{r, echo=FALSE}
+data3 <- read.table("/Users/balbinavirgili/generated_dataset3.csv")
+```
+
+```{r}
+#Second replication
+#Generation of the different factors needed as defined
+factor2 <- runif(20, min=0, max=12)
+factor3 <- rexp(20, rate=1)
+factor4 <- rnorm(20, mean=3, sd=3)
+factor5 <- runif(20, min=6, max=25)
+
+#Generation of the answer variable using the linear model defined
+answer <- 2.01467 * factor2 - 1.10249 * factor3 + 2.99932 * factor4 + 0.99738 * factor5
+
+#Generation of the dataset
+data4 <- data.frame(factor2, factor3, factor4, factor5, answer)
+```
+
+```{r, echo=FALSE}
+data4 <- read.table("/Users/balbinavirgili/generated_dataset4.csv")
+```
+
+Once the needed datasets are already generated, the two levels for each factor needs to be determined. As it has been defined during the previous points, the maximum and the minimum value will be used for each of this levels. So, this values need to be calculated from the datasets created.
+
+```{r}
+summary(data3)
+```
+```{r}
+summary(data4)
+```
+
+With the maximum and minimum value of each of the factors, we create the Yates table for the two replications using Excel. Then, the response is calculated for both replications using the extreme defined values. Finally, the mean of the two obtained values is calculated and this calculated value is the one that will be used as a response for the Yates algorithm calculus.
+\newline
+\newline
+\newline
+\newline\newline
+\newline
+\newline
+\newline
+\newline
+\newline
+![Screenshot of the yatesTable calculated with Excel](/Users/balbinavirgili/yates_table.png)
+
+The final table calculated is copied to a new datafile named yates_data5.xls and it is imported to RStudio.
+
+```{r, results=FALSE, echo=FALSE}
+library("gdata")
+```
+
+```{r}
+yatesTable <- read.xls("/Users/balbinavirgili/yates_data5.xls")
+```
+```{r, echo=FALSE}
+yatesTable
+```
+
+Now, Yates algorithm iterations will be performed using the library Dae.
+
+```{r, results=F}
+library("dae")
+```
+
+```{r}
+#Yates algorithm
+anovaModel <- aov(Values~ Factor2*Factor3*Factor4*Factor5, data=yatesTable)
+yatesModel <- yates.effects(anovaModel, data = yatesTable)
+```
+```{r, echo=FALSE}
+yatesModel
+```
+
+Finally, the mean of the different factors are also calculated to be able to determine the main effects of the calculus.
+
+```{r}
+meanData3 <- (sum(yatesTable$Values)/16)
+```
+```{r, echo=FALSE}
+meanData3
+```
+
+•	**Check that the data are consistent with the experimental assumptions.**
+
+To prove the data consistency, we perform and ANOVA test and the related assumptions to the data generated for this experiment.
+
+```{r}
+#ANOVA test for the data genereted for the first replication
+anovaModel <- aov(answer~ factor2*factor3*factor4*factor5 , data=data3) 
+```
+```{r, echo=FALSE}
+summary(anovaModel)
+```
+
+1-. Normality test
+
+It is necessary to test that the response is normally distributed with Shapiro-Wilk normality test.
+
+```{r}
+#Shapiro-Wilk normality test
+shapiro.test(residuals(anovaModel))
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication that normality distribution is violated.
+
+2-. Homogeneity of variance 
+
+It is necessary to test that the variance is similar within different groups with Breusch Pagan test.
+
+```{r}
+#Breusch Pagan test
+lmtest::bptest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication of heteroscedasticity on the calculated model. So we can conclude that there is homogeneity of variance. Otherwise, some transformations to eliminate heteroscedasticity would have been performed.
+
+3-. Independence of variables
+
+It is necessary to test that the data values are independent with Durbin Watson test.
+
+```{r}
+#Durbin Watson test
+lmtest::dwtest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0, so the alternative hypothesis can be accepted. It means that the variables are not independent and it exits a correlation between them.
+
+```{r}
+#ANOVA test for the data genereted for the second replication
+anovaModel <- aov(answer~ factor2*factor3*factor4*factor5 , data=data4) 
+```
+```{r, echo=FALSE}
+summary(anovaModel)
+```
+
+1-. Normality test
+
+It is necessary to test that the response is normally distributed with Shapiro-Wilk normality test.
+
+```{r}
+#Shapiro-Wilk normality test
+shapiro.test(residuals(anovaModel))
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication that normality distribution is violated.
+
+2-. Homogeneity of variance 
+
+It is necessary to test that the variance is similar within different groups with Breusch Pagan test.
+
+```{r}
+#Breusch Pagan test
+lmtest::bptest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication of heteroscedasticity on the calculated model. So we can conclude that there is homogeneity of variance. Otherwise, some transformations to eliminate heteroscedasticity would have been performed.
+
+3-. Independence of variables
+
+It is necessary to test that the data values are independent with Durbin Watson test.
+
+```{r}
+#Durbin Watson test
+lmtest::dwtest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0, so the alternative hypothesis can be accepted. It means that the variables are not independent and it exits a correlation between them.
+
+All assumptions are fullfiled for both datasets generated.
+
+•	**Analyze and interpret the results, detect effects of main factors and interactions.**
+
+The results obtained are showed again for a better understanding of the conclusions.
+
+```{r}
+yatesModel
+```
+
+As it was stablished at the begining of the DOE, the main objective of this experiment is determine the parametrization of the 10 factors with what the answer obtains the maximum value. So, the factors that we are looking for are the ones that effect the most to the answer value.
+
+With the results retrieved, all the factors that have a negative effect will be discarted. In this case, none of the factors have a negative impact to the answer because their relation was previously checked. Otherwise, there are some of interactions between the factors that have a negative impact (i.e Factor2:Factor3), all of this combinations can be discated.
+
+For the factors and interactions that have a positive effect, the value retrived needs to be evaluated. Taking into consideration that the calculated mean is 25,05, the factors that are considered that effect the most are the following one (ordered by importance):
+
+* Factor5 (18.12350)
+* Factor2 (10.87350)
+* Factor4 (9.849350)
+* Factor3 (4.051900)
+
+As we can see, there is no interaction with a significant effect.
+
+
+
+
+
+
+
+
+
+
+

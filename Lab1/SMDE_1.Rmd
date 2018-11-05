@@ -1,0 +1,502 @@
+---
+title: "SMDE FIRST ASSIGMENT"
+author: "Balbina Virgili Rocosa"
+date: "27th October 2017"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+## FIRST QUESTION: GENERATE A RANDOM SAMPLE
+
+To start working with probability distributions, first of all, 220 observations have been generated using Spreadsheet.
+
+To do it, next steps have been followed:
+
+1-. 220 random number have been generated
+
+    =RAND()
+
+2-. The normal distribution of each number generated have been calculated, with mean 0 and standard deviation 1.
+
+    =NORM.INV(AX;0;1)
+  
+3-. The resultant values of the last calculation have been saved on a new document (values_generated.csv).
+
+4-. The observations calculated have been loaded to RStudio
+
+  
+```{r}
+#Load the values generated on the spreadsheet file
+genDatasetImported <- read.table("./generated_values.csv", header=FALSE)
+#The name of the column has been changed just to make it equal as the other subset
+colnames(genDatasetImported) <- c("x1")
+
+```
+
+Afterwards, a new collection of 220 observations has been created now with R (with same mean and standard distribution as before).
+
+```{r}
+
+#Generation of a normal distribution
+genValuesR <- rnorm(220, mean=0, sd=1)
+#Work with the data as a dataframe
+genDatasetR <- data.frame(x1=genValuesR)
+
+```
+
+Once both samples are ready to be used, the fitting test of the values is performed in order to determine if exists a statistical dependence between the generated distributions or not. The Chi-squared test of independence will be used for it.
+
+To be able to execute the test, the different values need to be classified into defined intervals.
+
+```{r}
+
+#Definition of the intervals, categories to be used. 
+tableDatasetImported = transform( genDatasetImported, cat = ifelse(x1 < -1,"-1",
+                                                            ifelse(x1 < -0.5,"-0.5", 
+                                                            ifelse(x1 < 0,"0", 
+                                                            ifelse(x1 < 0.5,"0.5", 
+                                                            ifelse(x1 <1,"1","Inf"))))))
+#Definition of the intervals, categories to be used. 
+tableDatasetR = transform( genDatasetR, cat = ifelse(x1 < -1,"-1",
+                                              ifelse(x1 < -0.5,"-0.5", 
+                                              ifelse(x1 < 0,"0", 
+                                              ifelse(x1 < 0.5,"0.5", 
+                                              ifelse(x1 <1,"1","Inf"))))))
+
+```
+
+The results obtained from the previous classification will be checked in order to see the amount of elements on each frequency.
+
+```{r}
+#Counting the amount of elements in each category “table” function. 
+freqTableImp = as.data.frame(with(tableDatasetImported, table(cat)))
+```
+```{r, echo=FALSE}
+freqTableImp
+```
+```{r}
+freqTableR = as.data.frame(with(tableDatasetR, table(cat)))
+```
+```{r, echo=FALSE}
+freqTableR
+```
+
+Both generated frequencies are joined in a new table where the data is classified appropriately to perform the Chi-squared test.
+
+```{r}
+#Join both calculated frequencies tables into a final one
+freqTableFinal = data.frame(x1 = freqTableImp[2], x2 = freqTableR[2])
+```
+```{r, echo=FALSE}
+
+freqTableFinal
+
+```
+
+Finally, the Chi-square test has been performed.
+
+```{r}
+#Chi-sqaure test
+chiSquareTest = chisq.test(freqTableFinal, correct=FALSE)
+```
+```{r, echo=FALSE}
+chiSquareTest
+```
+
+
+With the results obtained, we can appreciate that the p-value calculated is greater than 0.05. Then, the null hypothesis can be accepted and it can be concluded that there is relationship between the two distributions. So, they are not independent and have a similarity. Unfortunately, the level of similarity cannot be calculated with this test.
+
+Now, two other distributions will be analyzed.
+In this case, two distributions with different mean will be generated and analyzed.
+
+```{r}
+#Generate other distributions
+genValuesR2 <- rnorm(220, mean=3, sd=3)
+genValuesR3 <- rnorm(220, mean=10, sd=4)
+
+genDatasetR2 <- data.frame(x1=genValuesR2)
+genDatasetR3 <- data.frame(x1=genValuesR3)
+
+tableDatasetR2 = transform( genDatasetR2, cat = ifelse(x1 < -1,"-1",
+                                                ifelse(x1 < -0.5,"-0.5", 
+                                                ifelse(x1 < 0,"0", 
+                                                ifelse(x1 < 0.5,"0.5", 
+                                                ifelse(x1 <1,"1","Inf"))))))
+tableDatasetR3 = transform( genDatasetR3, cat = ifelse(x1 < -1,"-1",
+                                                ifelse(x1 < -0.5,"-0.5", 
+                                                ifelse(x1 < 0,"0", 
+                                                ifelse(x1 < 0.5,"0.5", 
+                                                ifelse(x1 <1,"1","Inf"))))))
+
+freqTableR2 = as.data.frame(with(tableDatasetR2, table(cat)))
+freqTableR3 = as.data.frame(with(tableDatasetR3, table(cat)))
+
+freqTableFinal2 = data.frame(x1 = freqTableR2[2], x2 = freqTableR3[2])
+```
+```{r, warning=F}
+chiSquareTest2 = chisq.test(freqTableFinal2)
+```
+```{r, echo=FALSE}
+chiSquareTest2
+```
+
+With the results obtained, we can appreciate that the p-value calculated is lower than 0.05. Then, the null hypothesis cannot be accepted and it can be concluded that there is no relationship between the two distributions. So, they are independent and have a no similarity.
+
+
+## SECOND QUESTION: ANOVA
+
+In this exercise, the ANOVA test will be used to test whether three populations have similarity or not.
+
+To start with it, three different distributions have been generated. All of them have different mean values.
+
+```{r}
+#Generation of Three different populations with different mean values
+v1 = rnorm(200, mean=2, sd=1) 
+v2 = rnorm(200, mean=5, sd=1) 
+v3 = rnorm(200, mean=7, sd=1)
+
+#Work with the data as a dataframe
+population1 = data.frame(x1=v1, x2="v1") 
+population2 = data.frame(x1=v2, x2="v2") 
+population3 = data.frame(x1=v3, x2="v3") 
+
+```
+
+ANOVA test is useful to compare the amount of variation among more than two groups in order to determine if exists a statistical dependence between all of them or not.
+
+The three generated frequencies are joined in a new table where the data is classified appropriately to perform the ANOVA test.
+In the generated table the first column is representing the calculated value and the second one the category.
+
+```{r, results=F}
+#RcmdrMisc needs to be loaded to execute the following steps 
+library("RcmdrMisc")
+
+#Merge all generated distributions into a common table
+data = mergeRows(population1, population2, common.only=FALSE) 
+data = mergeRows(as.data.frame(data), population3, common.only=FALSE)
+
+```
+
+Finally, the ANOVA test has been performed.
+
+```{r}
+#ANOVA test
+anovaModel <- aov(x1 ~ x2, data=data) 
+```
+```{r, echo=FALSE}
+summary(anovaModel)
+```
+
+With the results obtained, we can appreciate that the p-value calculated is lower than 0.05. As the p-value is less than the significance level 0.05, we can conclude that there are significant differences between the three distributed models generated.
+
+Unfortunately, ANOVA test does not allow to check if just some of the distributions are similar to others or not. To see it, different pair test would be performed separately.
+
+Below this lines, a visual plot is showed to easily appreciate the results just calculated. With the graphic visualization can be proved that all three distributions are not similar to each other because their mean values are much different.
+
+```{r}
+Boxplot(x1~x2, data=data, id.method="y")
+```
+
+To prove the test validity, ANOVA test assumptions must be tested.
+
+1-. Normality test
+
+It is necessary to test that the response is normally distributed with Shapiro-Wilk normality test.
+
+```{r}
+#Shapiro-Wilk normality test
+shapiro.test(residuals(anovaModel))
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication that normality distribution is violated.
+
+2-. Homogeneity of variance 
+
+It is necessary to test that the variance is similar within different groups with Breusch Pagan test.
+
+```{r}
+#Breusch Pagan test
+lmtest::bptest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication of heteroscedasticity on the calculated model. So we can conclude that there is homogeneity of variance. Otherwise, some transformations to eliminate heteroscedasticity would have been performed.
+
+3-. Independence of variables
+
+It is necessary to test that the data values are independent with Durbin Watson test.
+
+```{r}
+#Durbin Watson test
+lmtest::dwtest(anovaModel)
+```
+
+The calculated p-value is higher than the significance level 0, so the alternative hypothesis can be accepted. It means that the variables are not independent and it exits a correlation between them.
+
+Now, a new ANOVA test with a different data will be performed. The data that will be used is geomorphology from FactoMinerR package. In fact, the main objective of this part of the assignment is to analyze if drift is a factor that defines different block sizes or wind effects.
+
+First, the data must be loaded.
+
+```{r, results=F}
+#FactoMineR needs to be loaded to be able to load the desired data
+library("FactoMineR")
+
+#Load geomorphology dataset
+data(geomorphology)
+```
+
+Once the data is loaded, the ANOVA test can be executed. To determine if drift is a factor that defines block sizes or wind effects two different ANOVA tests are performed to compare each desired factor with drift one.
+
+```{r}
+#ANOVA test to compare block sizes to drifts
+anovaModelBlockDrift <- aov(Block.size.median ~ Drift, data=geomorphology) 
+summary(anovaModelBlockDrift)
+```
+
+With the results obtained, we can appreciate that the p-value calculated is higher than 0.05. We can conclude that there are not significant differences between both distributions so we can confirm that drift is a factor that defines different block of sizes.
+
+```{r}
+#ANOVA test to compare wind effects to drifts
+anovaModelWindDrift <- aov(Wind.effect ~ Drift, data=geomorphology) 
+summary(anovaModelWindDrift)
+```
+
+With the results obtained, we can appreciate that the p-value calculated is lower than 0.05. We can conclude that there are significant differences between both distributions so we can confirm that drift is not a factor that defines wind effects.
+
+Finally, the plot of each ANOVA test is shown to check that our conclusions are the correct ones from a visual source.
+
+```{r}
+#Boxplot that compare block sizes with drifts
+Boxplot(Block.size.median ~ Drift, data=geomorphology, id.method="y")
+```
+
+
+
+```{r}
+#Boxplot that compare wind effects with drifts
+Boxplot(Wind.effect ~ Drift, data=geomorphology, id.method="y")
+```
+
+The first boxplot shows that all different categories have almost the same mean value with a small value of standard variance. While the other boxplot shows the opposite than before, different categories have different means with significant standard variance.
+So, we may also confirm this way the similarity between the first two factors. Otherwise, the calculation of the ANOVA test is more precise to determine our assumptions. 
+
+
+## THIRD QUESTION: DEFINE A LINEAR MODEL FOR AN ATHLETE IN THE 1500 M
+
+In this exercise, the linear expression that better predicts the behavior of an athlete in the 1500m must be determined. The data that will be used is decathlon from FactoMinerR package.
+
+First of all, the data must be loaded.
+
+```{r}
+#Load geomorphology dataset
+data(decathlon)
+```
+
+Once the data has been loaded, it is time to start playing with it. For it, first test is performed with the all categories that loaded data contains.
+
+```{r}
+#Generate the linear model with all data loaded
+lRegression <- lm(`1500m` ~ ., data=decathlon)
+```
+
+```{r, echo=FALSE}
+summary(lRegression)
+```
+
+With the results retrieved, we can see that almost all values, except Rank and Competition, have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we can determine that all categories, except Rank and Competition, have a relation with the 1500m distribution. 
+
+Otherwise, the results show that Rank and Competition are not much related with 1500m distribution so both of them can be discarded from the linear model.
+
+Now, a new linear regression model is calculated discarding Rank and Competition distributions.
+
+```{r}
+#Generate the linear model without discarted distributions
+lRegression2 <- update(lRegression, . ~ . - Rank - Competition)
+```
+
+```{r, echo=FALSE}
+summary(lRegression2)
+```
+
+With the results retrieved, we can see that all values have a p-value lower than 0.05 and the t-value much higher or much lower than 0. So we could determine that all categories have a relation with the 1500m distribution. 
+
+In this case, the R-squared value is 0.9975 so the probability to predict the 1500m distribution in this calculated linear model can be considered as very good one.
+
+Unfortunately, analyzing all different values used, we can determine that Points must not be used to create the linear model because it is a value calculated from the undetermined value. So, it does not make sense to use this category to predict the 1500m value. 
+
+So, a new linear regression model is calculated discarding Points distribution.
+
+```{r}
+#Generate the linear model without discarted distribution
+lRegression3 <- update(lRegression2, . ~ . - Points)
+```
+
+```{r, echo=FALSE}
+summary(lRegression3)
+```
+
+With the new results retrieved, we can see that dependencies have changed. Now, we can determine that 400m, Discus, Pole.vault, Discus, Javeline and 400m have a relation with 1500m distribution. The one that seems to be more related to the 1500m distribution is 400m.
+
+In this case, the R-squared value is 0.378 so the probability to predict the 1500m distribution in this calculated linear model has decreased significantly from the previous calculated model.
+
+To determine that our assumptions are correct, a new linear regression model is calculated discarding all distributions that have been considered as not relationated.
+
+```{r}
+#Generate the linear model without discarted distributions
+lRegression4 <- lm(formula = `1500m` ~ `100m` + `400m` + Pole.vault + Discus +
+                     Javeline, data = decathlon)
+```
+
+```{r, echo=FALSE}
+summary(lRegression4)
+```
+
+With the new results retrieved, we can see that dependencies are still the same as the ones calculated on the previous model. But now, the R-squared value is 0.4367. So the probability to predict the 1500m distribution in this calculated linear model has increased from the value calculated during the previous model, where much more information was used.
+
+Finally, just to take into account all useful possibilities, a new linear regression model is calculated using just the 400m distribution, which seems to be the most related one from the results retrieved on the previous linear models.
+
+```{r}
+#Generate the linear model without discarted distributions
+lRegression5 <- lm(formula = `1500m` ~ `400m`, data = decathlon)
+```
+
+```{r, echo=FALSE}
+summary(lRegression5)
+```
+
+With the new results retrieved, we can see that dependencies have changed a little bit and the R-squared value is 0.1452. So the probability to predict the 1500m distribution in this calculated linear model has decreased almost a 20% from the value calculated during the previous model, where much more information was used.
+
+To conclude, it can be determined that the best linear model to predict the behavior of an athlete for 1500m is the one that takes into account all the following variables:
+
+  - 400m
+  - Pole.vault
+  - Javeline
+  - Discus
+  - 100m
+  
+Finally, Linear model test assumptions must be calculated to prove the test validity.
+
+1-. Normality test
+
+It is necessary to test that the response is normally distributed with Shapiro-Wilk normality test.
+
+```{r}
+#Shapiro-Wilk normality test
+shapiro.test(residuals(lRegression4))
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication that normality distribution is violated.
+
+2-. Homogeneity of variance 
+
+It is necessary to test that the variance is similar within different groups with Breusch Pagan test.
+
+```{r}
+#Breusch Pagan test
+lmtest::bptest(lRegression4)
+```
+
+The calculated p-value is higher than the significance level 0.05, so there is no indication of heteroscedasticity on the calculated model. So we can conclude that there is homogeneity of variance. Otherwise, some transformations to eliminate heteroscedasticity would have been performed.
+
+3-. Independence of variables
+
+It is necessary to test that the data values are independent with Durbin Watson test.
+
+```{r}
+#Durbin Watson test
+lmtest::dwtest(lRegression4)
+```
+
+The calculated p-value is higher than the significance level 0, so the alternative hypothesis can be accepted. It means that the variables are not independent and it exits a correlation between them.
+
+## FOURTH QUESTION: USE THE MODEL TO PREDICT THE BEHAVIOR OF AN ATHLETE
+
+In this exercise, the behavior of an athlete wants to be predicted. It can be done thanks to the linear model calculated on the previous exercise. To do it, decathlon data will be tested.
+
+Firstly, the decathlon data is separated by competition into different variables. This way, the initial data will be divided into training and test data. In this prediction the data obtained from Decastar competition is going to be used as training data and the one obtained from OlympicG is the one that will be used to test our prediction results.
+
+```{r}
+#Two new subsets are created with the decathlon data separated by competition
+dataDecastar <- subset(decathlon, Competition=='Decastar')
+dataOlympicG <- subset(decathlon, Competition=='OlympicG')
+```
+
+So the linear model calculated on the previous exercise is again executed but just using the training data.
+
+```{r}
+#Generate the linear model with training data
+lRegression6 <- lm(formula = `1500m` ~ `100m` + `400m` + Pole.vault, data = dataDecastar)
+
+```{r, echo=FALSE}
+summary(lRegression6)
+```
+
+With the new results retrieved of this new linear model, we can see that R-squared value is 0.5464 so the probability of prediction is above 50% which is considered the minimum percentage accepted on athleticism.
+
+Two different predictions can be performed.
+
+1-. The first one is to predict the behavior of the athletes during the next race.
+2-. The second one is to predict the behavior of the athletes during the following races.
+
+As the dataset we are using is not very complete because it does not have lots of data, just the first prediction test will be performed. So, the prediction interval has been calculated using the data sample collected.
+
+```{r}
+#Predict the behavior of the athletes with prediction interval
+predictedData <- predict(lRegression4, newdata=dataOlympicG, interval="prediction")
+```
+```{r, echo=FALSE}
+predictedData
+```
+
+With the predict function we obtain the ranges within the data of the following race must be determined according to our designed model.
+
+So, we are going to check if the predict function is accurated or not. To do it, we are going to determine if the data from OlympicsG competition actually lies between the ranges calculated.
+
+```{r}
+#Determine if the data of OlympicsG competition lies between the rangs calculated
+#TRUE if fits into the rang, FALSE OTHERWISE
+compData <- c()
+predictedDataFrame <- data.frame(x1=predictedData)
+dataOlympicGFrame <- data.frame(x1=dataOlympicG)
+for(x in 1:nrow(predictedDataFrame)) {
+  if( dataOlympicGFrame$x1.1500m[x] >= predictedDataFrame$x1.lwr[x] && 
+      dataOlympicGFrame$x1.1500m[x] <= predictedDataFrame$x1.upr[x]){
+    compData[x] <- 'TRUE'
+  }else{
+    compData[x] <- 'FALSE'
+  }
+}
+
+predictedDataFrame["prediction"] <- compData
+```
+
+```{r, echo=FALSE}
+predictedDataFrame
+```
+
+As it was expected, we have obtained 27 well-predicted values and 1 wrong-predicted one. Then, the prediction interval obtained is 96'4% and can be confirmed that the values obtained lie within the prediction interval of 95% of the samples so it can be determined that the model designed during the previous exercise is an accurate one.
+
+## FIVE QUESTION: PCA
+
+In this exercise, the PCA analysis will be used to describe the main variables that exists on the dataset decathlon, which has been already used during the previous exercises. 
+
+The PCA analysis is useful if to see if there are linear relationships between variables. So, for the analysis, all variables will be used as active variables except Points and Rank which will be used as supplementary variables.
+
+Looking to the loaded data decathlon, Points and Rank variables can be determined to derived data because it can be calculated from the combination of other variables. So, we will use it as supplementary just to see them on the result of the analysis but they are not influencing the active variables initial relationship.
+
+```{r}
+#PCA analysis
+pcaAnalysis = PCA(decathlon[,1:12], scale.unit=TRUE, quanti.sup=c(11: 12))
+```
+
+With the results obtained, it can be determined all the relationships between the different characteristics that an athlete is likely to have.
+
+Analyzing the data obtained, it can be assumed that the most linked analysis to the number of pints are the variables 100m, 110m.hurdle, 400m and long jump. While not for 1500m. In fact, 1500m will depend on other values, which were already calculated on the thirtieth exercise, such as Discuss, 400m, Pole.vault...
+
+Additionally, analyzing the map, it can be easily seen that as much faster as an athlete can run 100m, less it will long jump or, viceversa. So, opposite arrows means opposite result of the behavior.
+
+We can also assume that the first two dimensions resume the 50% of the total variance of the dataset.
+
+
+
+
